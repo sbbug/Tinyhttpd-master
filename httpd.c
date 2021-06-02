@@ -27,6 +27,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 
+//是否为空格
 #define ISspace(x) isspace((int)(x))
 
 #define SERVER_STRING "Server: jdbhttpd/0.1.0\r\n"
@@ -54,7 +55,7 @@ void unimplemented(int);
 /**********************************************************************/
 void accept_request(void *arg)
 {
-    int client = (intptr_t)arg;
+    int client = (intptr_t)arg;//获取socket连接符
     char buf[1024];
     size_t numchars;
     char method[255];
@@ -68,6 +69,7 @@ void accept_request(void *arg)
 
     numchars = get_line(client, buf, sizeof(buf));
     i = 0; j = 0;
+    //获取请求类型
     while (!ISspace(buf[i]) && (i < sizeof(method) - 1))
     {
         method[i] = buf[i];
@@ -76,15 +78,18 @@ void accept_request(void *arg)
     j=i;
     method[i] = '\0';
 
+    //请求类型非get、post
     if (strcasecmp(method, "GET") && strcasecmp(method, "POST"))
     {
         unimplemented(client);
         return;
     }
 
+    //如果是post请求
     if (strcasecmp(method, "POST") == 0)
         cgi = 1;
 
+    //获取请求url
     i = 0;
     while (ISspace(buf[j]) && (j < numchars))
         j++;
@@ -95,12 +100,12 @@ void accept_request(void *arg)
     }
     url[i] = '\0';
 
-    if (strcasecmp(method, "GET") == 0)
+    if (strcasecmp(method, "GET") == 0)// 若为get请求
     {
         query_string = url;
         while ((*query_string != '?') && (*query_string != '\0'))
             query_string++;
-        if (*query_string == '?')
+        if (*query_string == '?')//找到"？"
         {
             cgi = 1;
             *query_string = '\0';
@@ -125,9 +130,9 @@ void accept_request(void *arg)
                 (st.st_mode & S_IXOTH)    )
             cgi = 1;
         if (!cgi)
-            serve_file(client, path);
+            serve_file(client, path);//执行文件操作
         else
-            execute_cgi(client, path, method, query_string);
+            execute_cgi(client, path, method, query_string);//执行CGI
     }
 
     close(client);
@@ -137,7 +142,7 @@ void accept_request(void *arg)
 /* Inform the client that a request it has made has a problem.
  * Parameters: client socket */
 /**********************************************************************/
-void bad_request(int client)
+void bad_request(int client) //请求出问题 400错误 客户端错误
 {
     char buf[1024];
 
@@ -160,6 +165,7 @@ void bad_request(int client)
  * Parameters: the client socket descriptor
  *             FILE pointer for the file to cat */
 /**********************************************************************/
+//发送文件内容到客户端
 void cat(int client, FILE *resource)
 {
     char buf[1024];
@@ -176,7 +182,7 @@ void cat(int client, FILE *resource)
 /* Inform the client that a CGI script could not be executed.
  * Parameter: the client socket descriptor. */
 /**********************************************************************/
-void cannot_execute(int client)
+void cannot_execute(int client) //服务器内部错误 500
 {
     char buf[1024];
 
@@ -208,12 +214,12 @@ void error_die(const char *sc)
  *             path to the CGI script */
 /**********************************************************************/
 void execute_cgi(int client, const char *path,
-        const char *method, const char *query_string)
+        const char *method, const char *query_string) //执行CGI
 {
     char buf[1024];
     int cgi_output[2];
     int cgi_input[2];
-    pid_t pid;
+    pid_t pid; //接收进程号
     int status;
     int i;
     char c;
@@ -221,7 +227,7 @@ void execute_cgi(int client, const char *path,
     int content_length = -1;
 
     buf[0] = 'A'; buf[1] = '\0';
-    if (strcasecmp(method, "GET") == 0)
+    if (strcasecmp(method, "GET") == 0) //get请求执行
         while ((numchars > 0) && strcmp("\n", buf))  /* read & discard headers */
             numchars = get_line(client, buf, sizeof(buf));
     else if (strcasecmp(method, "POST") == 0) /*POST*/
@@ -235,7 +241,7 @@ void execute_cgi(int client, const char *path,
             numchars = get_line(client, buf, sizeof(buf));
         }
         if (content_length == -1) {
-            bad_request(client);
+            bad_request(client);//请求出问题
             return;
         }
     }
@@ -244,7 +250,7 @@ void execute_cgi(int client, const char *path,
     }
 
 
-    if (pipe(cgi_output) < 0) {
+    if (pipe(cgi_output) < 0) {//创建管道
         cannot_execute(client);
         return;
     }
@@ -253,13 +259,13 @@ void execute_cgi(int client, const char *path,
         return;
     }
 
-    if ( (pid = fork()) < 0 ) {
+    if ( (pid = fork()) < 0 ) { //创建一个进程
         cannot_execute(client);
         return;
     }
     sprintf(buf, "HTTP/1.0 200 OK\r\n");
     send(client, buf, strlen(buf), 0);
-    if (pid == 0)  /* child: CGI script */
+    if (pid == 0)  /* child: CGI script */ //子进程执行
     {
         char meth_env[255];
         char query_env[255];
@@ -281,7 +287,7 @@ void execute_cgi(int client, const char *path,
         }
         execl(path, NULL);
         exit(0);
-    } else {    /* parent */
+    } else {    /* parent *///父进程执行
         close(cgi_output[1]);
         close(cgi_input[0]);
         if (strcasecmp(method, "POST") == 0)
@@ -432,7 +438,7 @@ int startup(u_short *port)
     int on = 1;
     struct sockaddr_in name;
 
-    httpd = socket(PF_INET, SOCK_STREAM, 0);
+    httpd = socket(PF_INET, SOCK_STREAM, 0);//监听端口
     if (httpd == -1)
         error_die("socket");
     memset(&name, 0, sizeof(name));
@@ -443,6 +449,7 @@ int startup(u_short *port)
     {  
         error_die("setsockopt failed");
     }
+    // bind 把名字和套接字相关联
     if (bind(httpd, (struct sockaddr *)&name, sizeof(name)) < 0)
         error_die("bind");
     if (*port == 0)  /* if dynamically allocating a port */
@@ -495,22 +502,23 @@ int main(void)
     socklen_t  client_name_len = sizeof(client_name);
     pthread_t newthread;
 
-    server_sock = startup(&port);
+    server_sock = startup(&port);//获取服务端socket的ID
     printf("httpd running on port %d\n", port);
 
-    while (1)
+    while (1)//服务端开启循环
     {
         client_sock = accept(server_sock,
                 (struct sockaddr *)&client_name,
-                &client_name_len);
+                &client_name_len);//获取客户端ID
         if (client_sock == -1)
             error_die("accept");
         /* accept_request(&client_sock); */
+        //开启线程处理客户端请求
         if (pthread_create(&newthread , NULL, (void *)accept_request, (void *)(intptr_t)client_sock) != 0)
             perror("pthread_create");
     }
 
-    close(server_sock);
+    close(server_sock);//关闭请求
 
     return(0);
 }
