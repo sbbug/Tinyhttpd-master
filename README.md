@@ -1,7 +1,8 @@
 
 ## web服务器雏形
 http协议位于五层网络协议栈应用层。http基于传输层TCP包装而成，属于TCP协议的上层应用。
-
+了解并学习web服务器的工作原理对深入学习后端编程具有重要作用，所有的软件均是由简单到复杂，
+由demo实验再到完整版发布的过程。
 
 A mirror for tinyhttpd(Tinyhttpd非官方镜像,Fork自[sourceForge](https://sourceforge.net/projects/tiny-httpd/),仅供学习)
 
