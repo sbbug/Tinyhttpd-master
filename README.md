@@ -1,3 +1,8 @@
+
+## web服务器雏形
+http协议位于五层网络协议栈应用层。http基于传输层TCP包装而成，属于TCP协议的上层应用。
+
+
 A mirror for tinyhttpd(Tinyhttpd非官方镜像,Fork自[sourceForge](https://sourceforge.net/projects/tiny-httpd/),仅供学习)
 
 测试CGI时需要本机安装PERL，同时安装perl-cgi
